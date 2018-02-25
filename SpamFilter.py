@@ -157,20 +157,43 @@ def Calculate_Accuracy(OriginalFileLabelPath,Result):
     
     correct_predictions = 0.0
     incorrect_predictions = 0.0
+    
+    ham_correct = 0.0
+    ham_incorrect = 0.0
+    spam_correct = 0.0
+    spam_incorrect = 0.0
 
     iter_counter = 0
     with open(OriginalFileLabelPath) as File_Labels:
         for line in File_Labels:
-            if(int(line) == int(Result[iter_counter])):
+            if(int(line) == 0 and int(Result[iter_counter]) == 0):
+                ham_correct += 1.0
                 correct_predictions += 1.0
-            else:
+            elif(int(line) == 0 and int(Result[iter_counter]) == 1):
                 incorrect_predictions += 1.0
+                ham_incorrect += 1.0
+            
+            if(int(line) == 1 and int(Result[iter_counter]) == 1):
+                spam_correct += 1.0
+                correct_predictions += 1.0
+            elif(int(line) == 1 and int(Result[iter_counter]) == 0):
+                incorrect_predictions += 1.0
+                spam_incorrect += 1.0
             iter_counter += 1
+            
     File_Labels.close()
     accuracy =  correct_predictions/(correct_predictions+incorrect_predictions)
-                
+    Display_Confusion_Matrix(ham_correct,ham_incorrect,spam_correct,spam_incorrect)
     return accuracy
 
+################################################################################
+    
+def Display_Confusion_Matrix(ham_correct,ham_incorrect,spam_correct,spam_incorrect):
+    print("----------------")
+    print(ham_correct,"  ",ham_incorrect)
+    print(spam_incorrect,"  ",spam_correct)
+    print("----------------")
+    
 
 
 ################################################################################
@@ -188,11 +211,11 @@ def main():
     Calculate_Spam_Probabilities()
     Result = Predict_Spam_Ham(training_features_path)
     accuracy = Calculate_Accuracy(training_labels_path,Result)
-    print(accuracy)
+    print("Accuracy: ",accuracy)
     
     Result = Predict_Spam_Ham(test_features_path)
     accuracy = Calculate_Accuracy(test_labels_path,Result)
-    print(accuracy)
+    print("Accuracy: ",accuracy)
 
 if __name__ == "__main__":
     main()
