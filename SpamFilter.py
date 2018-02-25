@@ -48,7 +48,7 @@ def Read_Data(training_features_path, training_labels_path):
                 if(Dictionary_Email_Labels[int(each_data_row[0])]== 0):
                     Dictionary_Email_Features[each_data_row[1]] = {'spam':0,'ham':int(each_data_row[2]),'probability_spam':0.0,'probability_ham':0.0}
                 else:
-                    Dictionary_Email_Features[each_data_row[1]] = {'spam':int(each_data_row[2]),'ham':0,'probability_spam':0.0}
+                    Dictionary_Email_Features[each_data_row[1]] = {'spam':int(each_data_row[2]),'ham':0,'probability_spam':0.0,'probability_ham':0.0}
                     
     File_Training_Features.close()
     
@@ -121,11 +121,16 @@ def Predict_Spam_Ham(pathToFeatures):
     for key in Dictionary_Email_Predict:
         wordsList = Dictionary_Email_Predict[key]
         for word in wordsList:
-            spam_probability = Dictionary_Email_Features[word]['probability_spam']
-            ham_probability = Dictionary_Email_Features[word]['probability_ham']
+            #check if the word is there. Sometimes in the test set there are words that were not in training data
+            if word in Dictionary_Email_Features:
+                
+                spam_probability = Dictionary_Email_Features[word]['probability_spam']
+                ham_probability = Dictionary_Email_Features[word]['probability_ham']
 #            print("word: ",word," spam probability: ",spam_probability)
-            Result_Probability_Spam = Result_Probability_Spam * spam_probability
-            Result_Probability_Ham = Result_Probability_Ham * ham_probability
+                Result_Probability_Spam = Result_Probability_Spam * spam_probability
+                Result_Probability_Ham = Result_Probability_Ham * ham_probability
+            else:
+                print("word: ",word," not found during training")
             
 #          probability(Spam)
 #        ------------------------------- = Thus in summary if probability(Spam) > probability(Ham) then it's a spam
@@ -144,9 +149,27 @@ def Predict_Spam_Ham(pathToFeatures):
             Result_List.append(0)
             
     print(Result_List)
+    return Result_List
             
 
+################################################################################
+def Calculate_Accuracy(OriginalFileLabelPath,Result):
+    
+    correct_predictions = 0.0
+    incorrect_predictions = 0.0
 
+    iter_counter = 0
+    with open(OriginalFileLabelPath) as File_Labels:
+        for line in File_Labels:
+            if(int(line) == int(Result[iter_counter])):
+                correct_predictions += 1.0
+            else:
+                incorrect_predictions += 1.0
+            iter_counter += 1
+    File_Labels.close()
+    accuracy =  correct_predictions/(correct_predictions+incorrect_predictions)
+                
+    return accuracy
 
 
 
@@ -158,14 +181,18 @@ def main():
     training_features_path = 'C:\\Users\\Aakash\\Desktop\\NaiveBayesSpamFilter\\preprocdata\\train-features.txt'
     training_labels_path = 'C:\\Users\\Aakash\\Desktop\\NaiveBayesSpamFilter\\preprocdata\\train-labels.txt'
 
+    test_features_path = 'C:\\Users\\Aakash\\Desktop\\NaiveBayesSpamFilter\\preprocdata\\test-features.txt'
+    test_labels_path = 'C:\\Users\\Aakash\\Desktop\\NaiveBayesSpamFilter\\preprocdata\\test-labels.txt'
+
     Read_Data(training_features_path,training_labels_path)
     Calculate_Spam_Probabilities()
-    Predict_Spam_Ham(training_features_path)
-#    CreateMatrix()
-#    PerformFeatureScaling()
-#    Spit_Dataset()
-#    Logistic_Regression_Gradient_Descent()
-#    Predict_Results()
+    Result = Predict_Spam_Ham(training_features_path)
+    accuracy = Calculate_Accuracy(training_labels_path,Result)
+    print(accuracy)
+    
+    Result = Predict_Spam_Ham(test_features_path)
+    accuracy = Calculate_Accuracy(test_labels_path,Result)
+    print(accuracy)
 
 if __name__ == "__main__":
     main()
