@@ -4,6 +4,9 @@ Created on Sat Feb 24 08:58:43 2018
 
 @author: Aakash
 """
+
+import os #for relative path to data file.
+
 ################################################################################
 
 Dictionary_Email_Labels = {}
@@ -14,6 +17,9 @@ Dictionary_Email_Predict = {}
 Total_Emails = 0
 Train_Probability_Spam = 0
 Train_Probability_Ham = 0
+
+Laplace_Alpha = 0.1
+Laplace_Beta = 0.05
 
 
 ################################################################################
@@ -78,11 +84,9 @@ def Calculate_Spam_Probabilities():
         
         count_in_spam = Dictionary_Email_Features[key]['spam']
         count_in_ham = Dictionary_Email_Features[key]['ham']
-        spam_probability = count_in_spam/(count_in_spam+count_in_ham)
         
-        #similar to laplase smoothing I don't want zeros hence setting 0.01 to probability
-        if(spam_probability == 0):
-            spam_probability = 0.1
+        #also adding lapace smoothing because I don't want zeros in probability
+        spam_probability = (count_in_spam + Laplace_Alpha)/(count_in_spam + count_in_ham + Laplace_Beta)
             
         ham_probability = 1.0 - spam_probability
         
@@ -123,31 +127,36 @@ def Predict_Spam_Ham(pathToFeatures):
         for word in wordsList:
             #check if the word is there. Sometimes in the test set there are words that were not in training data
             if word in Dictionary_Email_Features:
-                
                 spam_probability = Dictionary_Email_Features[word]['probability_spam']
                 ham_probability = Dictionary_Email_Features[word]['probability_ham']
 #            print("word: ",word," spam probability: ",spam_probability)
                 Result_Probability_Spam = Result_Probability_Spam * spam_probability
                 Result_Probability_Ham = Result_Probability_Ham * ham_probability
             else:
-                print("word: ",word," not found during training")
+#                print("word: ",word," not found during training hence just skipping it")
+                continue
             
-#          probability(Spam)
+            
+#                 probability(Spam)
 #        ------------------------------- = Thus in summary if probability(Spam) > probability(Ham) then it's a spam
 #        probability(Spam) + probability(Ham)
+                
         if(Result_Probability_Spam > Result_Probability_Ham):
-            print("Message: ",key,": 1"," because probability_spam: ",Result_Probability_Spam," probability_ham: ",Result_Probability_Ham)
+#            print("Message: ",key,": 1"," because probability_spam: ",Result_Probability_Spam," probability_ham: ",Result_Probability_Ham)
 #            Resetting the probabilities
             Result_Probability_Spam = 1
             Result_Probability_Ham = 1
             Result_List.append(1)
         else:
-            print("Message: ",key,": 0"," because probability_spam: ",Result_Probability_Spam," probability_ham: ",Result_Probability_Ham)
+#            print("Message: ",key,": 0"," because probability_spam: ",Result_Probability_Spam," probability_ham: ",Result_Probability_Ham)
 #            Resetting the probabilities
             Result_Probability_Spam = 1
             Result_Probability_Ham = 1
             Result_List.append(0)
-            
+    
+    print("-------------------------------------------")
+    print("-----------PREDICTED RESULTS---------------")
+    print("-------------------------------------------")
     print(Result_List)
     return Result_List
             
@@ -184,38 +193,91 @@ def Calculate_Accuracy(OriginalFileLabelPath,Result):
     File_Labels.close()
     accuracy =  correct_predictions/(correct_predictions+incorrect_predictions)
     Display_Confusion_Matrix(ham_correct,ham_incorrect,spam_correct,spam_incorrect)
+    
+    print("CORRECT PREDICTIONS:",correct_predictions)
+    print("INCORRECT_PREDICTIONS:",incorrect_predictions)
     return accuracy
 
 ################################################################################
     
 def Display_Confusion_Matrix(ham_correct,ham_incorrect,spam_correct,spam_incorrect):
     print("----------------")
-    print(ham_correct,"  ",ham_incorrect)
-    print(spam_incorrect,"  ",spam_correct)
+    print("CONFUSION MATRIX")
+    print("----------------")
+    print("HAM: ",ham_correct,"    ",ham_incorrect)
+    print("SPAM:",spam_incorrect,"    ",spam_correct)
     print("----------------")
     
 
 
 ################################################################################
+    
+def Training_Steps_Perform(training_features_path,training_labels_path):
+    Read_Data(training_features_path,training_labels_path)
+    Calculate_Spam_Probabilities()
+    
+    
 ################################################################################
 
 def main():
-    
-    training_features_path = 'C:\\Users\\Aakash\\Desktop\\NaiveBayesSpamFilter\\preprocdata\\train-features.txt'
-    training_labels_path = 'C:\\Users\\Aakash\\Desktop\\NaiveBayesSpamFilter\\preprocdata\\train-labels.txt'
+    #getting the system path
+    dir = os.path.dirname(__file__)
 
-    test_features_path = 'C:\\Users\\Aakash\\Desktop\\NaiveBayesSpamFilter\\preprocdata\\test-features.txt'
-    test_labels_path = 'C:\\Users\\Aakash\\Desktop\\NaiveBayesSpamFilter\\preprocdata\\test-labels.txt'
-
-    Read_Data(training_features_path,training_labels_path)
-    Calculate_Spam_Probabilities()
-    Result = Predict_Spam_Ham(training_features_path)
-    accuracy = Calculate_Accuracy(training_labels_path,Result)
-    print("Accuracy: ",accuracy)
+    training_labels_path = os.path.join(dir,'preprocdata/train-labels.txt')
+    training_features_path = os.path.join(dir,'preprocdata/train-features.txt')
     
+    
+    Training_Steps_Perform(training_features_path,training_labels_path)
+    print("####################################################################")
+    print("Training Complete using file: train-featues,train-labels")
+    print("####################################################################")
+    print(" ")
+    
+    print("Testing file: train-features")
+    test_features_path = os.path.join(dir,'preprocdata/test-features.txt')
+    test_labels_path = os.path.join(dir,'preprocdata/test-labels.txt')
     Result = Predict_Spam_Ham(test_features_path)
     accuracy = Calculate_Accuracy(test_labels_path,Result)
-    print("Accuracy: ",accuracy)
-
+    print("ACCURACY: ",accuracy)
+    print("####################################################################")
+    print("####################################################################")
+    print("")
+    
+    
+    
+    print("Testing file: train-features-50")
+    test_features_path = os.path.join(dir,'preprocdata/smallerDatasets/train-features-50.txt')
+    test_labels_path = os.path.join(dir,'preprocdata/smallerDatasets/train-labels-50.txt')
+    Result = Predict_Spam_Ham(test_features_path)
+    accuracy = Calculate_Accuracy(test_labels_path,Result)
+    print("ACCURACY: ",accuracy)
+    print("####################################################################")
+    print("####################################################################")
+    print("")
+    
+    
+          
+    print("Testing file: train-features-100")
+    test_features_path = os.path.join(dir,'preprocdata/smallerDatasets/train-features-100.txt')
+    test_labels_path = os.path.join(dir,'preprocdata/smallerDatasets/train-labels-100.txt')
+    Result = Predict_Spam_Ham(test_features_path)
+    accuracy = Calculate_Accuracy(test_labels_path,Result)
+    print("ACCURACY: ",accuracy)
+    print("######################################################################################")
+    print("######################################################################################")
+    print("")
+    
+    
+    
+    print("Testing file: train-features-400")
+    test_features_path = os.path.join(dir,'preprocdata/smallerDatasets/train-features-400.txt')
+    test_labels_path = os.path.join(dir,'preprocdata/smallerDatasets/train-labels-400.txt')
+    Result = Predict_Spam_Ham(test_features_path)
+    accuracy = Calculate_Accuracy(test_labels_path,Result)
+    print("ACCURACY: ",accuracy)
+    print("######################################################################################")
+    print("######################################################################################")
+    print("")
+    
 if __name__ == "__main__":
     main()
